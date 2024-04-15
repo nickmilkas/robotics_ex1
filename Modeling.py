@@ -61,31 +61,45 @@ def find_pos(u_val):
     for index in range(1200):
         v = diff_kinematics(p, u_val)
         p = p + v * dt
+
         all_poses += [p]
+
     return np.array(all_poses)
 
 
-visualize_transitions(find_pos(u_values))
+# visualize_transitions(find_pos(u_values))
 
 
 # Question 3
-def rk4_integration(x0, u0, dt, total_t):
+def f_rk4_many_steps(x0, u0, steps):
+    dt = 0.1
     states_of_algorithm = [x0]
-    t = 0.
     x = np.copy(x0)
-    while t < (total_t - 1e-6):
+    for _ in range(steps):
         f1 = diff_kinematics(x, u0)
         f2 = diff_kinematics(x + 0.5 * dt * f1, u0)
         f3 = diff_kinematics(x + 0.5 * dt * f2, u0)
         f4 = diff_kinematics(x + dt * f3, u0)
         x = x + dt / 6. * (f1 + 2. * f2 + 2. * f3 + f4)
         states_of_algorithm.append(np.copy(x))
-        t += dt
 
     return np.array(states_of_algorithm)
 
 
-def visualize_transitions_with_rk4(states: np.ndarray):
+def f_rk4_one_step(x0, u0):
+    dt = 0.1
+
+    f1 = diff_kinematics(x0, u0)
+    f2 = diff_kinematics(x0 + 0.5 * dt * f1, u0)
+    f3 = diff_kinematics(x0 + 0.5 * dt * f2, u0)
+    f4 = diff_kinematics(x0 + dt * f3, u0)
+    x_pos = x0 + dt / 6. * (f1 + 2. * f2 + 2. * f3 + f4)
+    return x_pos
+
+
+def visualize_transitions_with_rk4(x0, steps):
+    states = f_rk4_many_steps(x_values, u_values, steps)
+
     fig = plt.figure()
     ax = fig.add_subplot(111)
     d = 0.25
@@ -96,8 +110,8 @@ def visualize_transitions_with_rk4(states: np.ndarray):
 
     for i in range(len(states)):
         position = states[i]
-        bpb = np.array([[-d, -d], [d, -d], [d, d], [-d, d], [-d, -d]]).T  # Vertices of the rectangle
-        bpw = rot(position[0, 0]) @ bpb + position[1:3, :]  # Rotate and translate vertices
+        bpb = np.array([[-d, -d], [d, -d], [d, d], [-d, d], [-d, -d]]).T
+        bpw = rot(position[0, 0]) @ bpb + position[1:3, :]
 
         rect = plt.Polygon(bpw.T, edgecolor='black', fill=False)
         ax.add_patch(rect)
@@ -110,5 +124,4 @@ def visualize_transitions_with_rk4(states: np.ndarray):
     plt.show()
 
 
-states = rk4_integration(x_values, u_values, 0.1, 50)
-visualize_transitions_with_rk4(states)
+#visualize_transitions_with_rk4(x_values, 4100)
