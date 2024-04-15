@@ -1,1 +1,1 @@
-# robotics_ex1
+# University exercise in Robotics
