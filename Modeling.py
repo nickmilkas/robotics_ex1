@@ -4,7 +4,7 @@ from matplotlib.patches import Rectangle
 
 # Initializing
 u_values = np.array([[0.5], [0.45]])
-x_values = np.array([[np.pi / 2], [1], [4]])
+x_values = np.array([[np.pi/4], [1], [4]])
 
 
 # Question A
@@ -93,7 +93,7 @@ def f_rk4_one_step(x0, u0):
     f2 = diff_kinematics(x0 + 0.5 * dt * f1, u0)
     f3 = diff_kinematics(x0 + 0.5 * dt * f2, u0)
     f4 = diff_kinematics(x0 + dt * f3, u0)
-    x_pos = x0 + dt / 6. * (f1 + 2. * f2 + 2. * f3 + f4)
+    x_pos = x0 + dt * (f1 + 2. * f2 + 2. * f3 + f4) / 6.
     return x_pos
 
 

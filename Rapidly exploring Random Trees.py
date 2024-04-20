@@ -2,11 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import Modeling
 
+# Initial position is (1,4)
 x_init = Modeling.x_values
-x_goal = np.array([[0., 3., 3.]]).T
+x_goal = np.array([[0., 7., 6.]]).T
 
 
-# Let's make a helper for that
 def state_to_tuple(xx):
     x = xx.reshape((-1, 1))
     return tuple(x[i, 0] for i in range(x.shape[0]))
@@ -16,12 +16,6 @@ def tuple_to_state(t):
     return np.array([[t[i]] for i in range(len(t))])
 
 
-def sample_state():
-    return np.random.rand(3, 1) * 10. - 5.
-
-
-# Now we need to find the nearest node
-# FIX THIS FOR 3X1 x
 def nearest(x, tree_var):
     dist = np.inf
     near = None
@@ -36,8 +30,10 @@ def nearest(x, tree_var):
     return near
 
 
-def cost_function(trajectory, x_target):
-    return np.linalg.norm(trajectory[-1] - x_target)
+def cost_function(node, x_target):
+    distance = np.linalg.norm(node[1:] - x_target[1:])
+
+    return distance
 
 
 def optimal_trajectory(x_start, x_target, k_samples):
@@ -47,95 +43,63 @@ def optimal_trajectory(x_start, x_target, k_samples):
     best_trajectory = None
     best_cost = np.inf
     for _ in range(k_samples):
-
         ul = np.random.uniform(min_ul, max_ul)
         ur = np.random.uniform(min_ur, max_ur)
-        u_val = np.array([[ul], [ur]])
 
+        u_val = np.array([[ul], [ur]])
         # Forward simulation
         trajectory = Modeling.f_rk4_one_step(x_start, u_val)
+
         # Evaluate trajectory
         cost = cost_function(trajectory, x_target)
+
         if cost < best_cost:
             best_cost = cost
             best_trajectory = trajectory
 
+        if np.linalg.norm(trajectory[1:] - x_target[1:]) < 0.1:
+            return trajectory
+
     return best_trajectory
 
 
-
-def valid_state(x):
-    if (np.abs(x) > 5.).any():
-        return False
-    return True
+optimal_trajectory(x_init, x_goal, 5)
 
 
-def RRT(x_start, goal, max_iters):
-    tree = {state_to_tuple(x_start): []}
+def RRT(x_start, x_goal, max_iters):
+    tree = {state_to_tuple(x_init): []}
     best_path = []
+    path_to_go = [state_to_tuple(x_start)]
+    nodes = x_start
 
     for i in range(max_iters):
-        x_sample = sample_state()
+        x_new = optimal_trajectory(nodes, x_goal, 500)
 
-        x_nearest = nearest(x_sample, tree)
+        tree[state_to_tuple(x_start)] = []
+        nodes = x_new
+        path_to_go.append(state_to_tuple(x_new))
+        if np.linalg.norm(x_goal[1:] - x_new[1:]) < 0.1:
 
-        # Both are 2x1 with (x,y) values
-        if x_nearest is None:
-            continue
+            path_to_go.append(state_to_tuple(x_goal))
 
-        x_new = optimal_trajectory(x_nearest, x_sample, 1000)
-
-        if not valid_state(x_new):
-            continue
-
-        tree[state_to_tuple(x_nearest)].append(x_new)
-        tree[state_to_tuple(x_new)] = []
-
-        if np.linalg.norm(goal[1:] - x_new[1:]) < 0.1:
-            # If the goal is reached, backtrack to build the path
-            best_path = [goal]
-            parent = x_new
-
-            while np.linalg.norm(parent - x_start[1:]) > 0.1:
-                for node, children in tree.items():
-                    if parent.tolist() in [child.tolist() for child in children]:
-                        best_path.append(tuple_to_state(node))
-                        parent = tuple_to_state(node)
-                        break
-            best_path.append(x_start)
-            best_path.reverse()
-            return True, tree, best_path
-
-    return False, tree, best_path
+            return True, tree, path_to_go
+    return False, tree, path_to_go
 
 
-valid, tree, path = RRT(x_init, x_goal, 1000)
+valid, tree, path_to_go = RRT(x_init, x_goal, 3000)
 
-print(valid, len(tree), len(path))
 
-if valid:
-    print("Path found!")
-else:
-    print("No path found within the maximum iterations.")
+for point in path_to_go:
+    plt.plot(point[1], point[2], marker='o', color='b')
 
-fig = plt.figure()
-ax = fig.add_subplot(111)
+plt.plot(x_init[1], x_init[2], 'ro', label='Start')
+plt.plot(x_goal[1], x_goal[2], 'go', label='Goal')
 
-# Plot nodes
-for state_tuple in tree:
-    state = np.array(state_tuple).reshape(-1, 1)
-    ax.plot(state[0], state[1], 'ro', zorder=2)
-
-    # Plot connections
-    for child_state in tree[state_tuple]:
-        ax.scatter(state[0], state[1], color='black', zorder=1)
-
-plt.plot(x_init[0], x_init[1], 'ro', label='Start')
-plt.plot(x_goal[0], x_goal[1], 'go', label='Goal')
-
-plt.ylim(-5., 5.)
-plt.xlim(-5., 5.)
-
+plt.xlabel('X')
+plt.ylabel('Y')
+plt.title('Path to go')
 plt.legend()
+plt.grid(True)
+plt.axis('equal')
 plt.show()
 
