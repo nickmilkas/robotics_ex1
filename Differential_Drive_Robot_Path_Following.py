@@ -3,12 +3,12 @@ import matplotlib.pyplot as plt
 import Rapidly_exploring_Random_Trees
 
 
-def plot_path_without_obstacles(xy_begin, xy_finish, iterations, number_of_samples):
+def plot_path_without_obstacles(xy_begin, xy_finish, iterations, number_of_samples, step_size=25):
     valid, path_to_go = Rapidly_exploring_Random_Trees.RRT(xy_begin, xy_finish, iterations, number_of_samples)
 
-    for i in range(len(path_to_go) - 1):
+    for i in range(0, len(path_to_go) - 1, step_size):
         point = path_to_go[i]
-        next_point = path_to_go[i + 1]
+        next_point = path_to_go[min(i + step_size, len(path_to_go) - 1)]
         plt.plot([point[1], next_point[1]], [point[2], next_point[2]], color='b')
 
         rect_outer = plt.Rectangle((point[1] - 0.1, point[2] - 0.1), 0.2, 0.2, color='b', fill=False)
@@ -28,14 +28,14 @@ def plot_path_without_obstacles(xy_begin, xy_finish, iterations, number_of_sampl
     plt.show()
 
 
-def plot_path_with_obstacles(xy_begin, xy_finish, iterations, number_of_samples, obst):
+def plot_path_with_obstacles(xy_begin, xy_finish, iterations, number_of_samples, obst, step_size=30):
     valid, path_to_go = Rapidly_exploring_Random_Trees.RRT_with_obstacles(xy_begin, xy_finish, iterations,
                                                                           number_of_samples, obst)
 
     # Plot the path
-    for i in range(len(path_to_go) - 1):
+    for i in range(0, len(path_to_go) - 1, step_size):
         point = path_to_go[i]
-        next_point = path_to_go[i + 1]
+        next_point = path_to_go[min(i + step_size, len(path_to_go) - 1)]
         plt.plot([point[1], next_point[1]], [point[2], next_point[2]], color='b')
 
         rect_outer = plt.Rectangle((point[1] - 0.1, point[2] - 0.1), 0.2, 0.2, color='b', fill=False)
@@ -64,7 +64,7 @@ def plot_path_with_obstacles(xy_begin, xy_finish, iterations, number_of_samples,
 # Initializing
 x_begin = np.array([[np.pi / 2], [1], [4]])
 x_finish = np.array([[-np.pi / 2], [6], [8]])
-obstacles = [(0.2, 1.7, 6), (0.2, 2, 12)]
+obstacles = [(0.2, 3, 7), (0.2, 3.7, 6)]
 
-# plot_path_without_obstacles(x_begin, x_finish, 2000, 500)
-plot_path_with_obstacles(x_begin, x_finish, 3000, 300, obstacles)
+# plot_path_without_obstacles(x_begin, x_finish, 2000, 100)
+plot_path_with_obstacles(x_begin, x_finish, 2000, 500, obstacles)

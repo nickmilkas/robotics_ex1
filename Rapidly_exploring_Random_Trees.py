@@ -22,11 +22,17 @@ def angle_difference(node, x_target):
     return angle_diff
 
 
+def cost_function(node, x_target):
+    dist = distance_function(node, x_target)
+    angle = angle_difference(node, x_target)
+    cost = 2 * dist + angle
+    return cost
+
+
 def optimal_trajectory(x_start, x_target, k_samples):
     min_ul, max_ul = -0.5, 0.5
     min_ur, max_ur = -0.5, 0.5
 
-    all_trajectories = []
     best_trajectory = None
     best_cost = np.inf
 
@@ -38,31 +44,19 @@ def optimal_trajectory(x_start, x_target, k_samples):
         # Forward simulation
         trajectory = Modeling.f_rk4_one_step(x_start, u_val)
 
-        distance = distance_function(trajectory, x_target)
-        all_trajectories.append((trajectory, distance))
+        cost = cost_function(trajectory, x_target)
 
-        if distance < best_cost:
-            best_cost = distance
+        if cost < best_cost:
+            best_cost = cost
             best_trajectory = trajectory
 
         if np.linalg.norm(trajectory[1:] - x_target[1:]) < 0.1:
             return trajectory
-    all_trajectories.sort(key=lambda x: x[1])
-
-    smallest_angle_diff = np.inf
-    count = 1
-    for elements in all_trajectories:
-        angle = angle_difference(elements[0], x_target)
-        if angle < smallest_angle_diff:
-            best_trajectory = elements[0]
-        count += 1
-        if count == 3:
-            break
 
     return best_trajectory
 
 
-def optimal_trajectory_with_obstacles(x_start, x_target, k_samples, obs_positions=None):
+def optimal_trajectory_with_obstacles(x_start, x_target, k_samples, obs_positions):
     min_ul, max_ul = -0.5, 0.5
     min_ur, max_ur = -0.5, 0.5
 
@@ -74,23 +68,29 @@ def optimal_trajectory_with_obstacles(x_start, x_target, k_samples, obs_position
         ur = np.random.uniform(min_ur, max_ur)
 
         u_val = np.array([[ul], [ur]])
+        u_new = u_val.copy()
 
         trajectory = Modeling.f_rk4_one_step(x_start, u_val)
-        cost = distance_function(trajectory, x_target)
+        cost = cost_function(trajectory, x_target)
 
-        avoid_obstacle = True
-        if obs_positions:
-            for obs in obs_positions:
-                distance = (trajectory[1] - obs[1]) ** 2 + (trajectory[2] - obs[2]) ** 2
-                if distance < 0.2 + obs[0] ** 2:
-                    avoid_obstacle = False
-                    angle_to_obstacle = np.arctan2(trajectory[2] - obs[2], trajectory[1] - obs[1])
-                    angle_to_target = np.arctan2(x_target[2] - trajectory[2], x_target[1] - trajectory[1])
-                    diff_angle = angle_to_target - angle_to_obstacle
-                    ul += np.sin(diff_angle) * 0.1
-                    ur -= np.sin(diff_angle) * 0.1
+        for obs in obs_positions:
 
-        if avoid_obstacle and cost < best_cost:
+            distance = (trajectory[1] - obs[1]) ** 2 + (trajectory[2] - obs[2]) ** 2
+            if distance < obs[0] + obs[0] ** 2:
+
+                angle_to_obstacle = np.arctan2(trajectory[2] - obs[2], trajectory[1] - obs[1])
+                angle_to_target = np.arctan2(x_target[2] - trajectory[2], x_target[1] - trajectory[1])
+                diff_angle = angle_to_target - angle_to_obstacle
+
+                if diff_angle > 0:
+                    u_new[1, 0] = 0.5
+                if diff_angle < 0:
+                    u_new[0, 0] = 0.5
+
+                trajectory = Modeling.f_rk4_one_step(x_start, u_new)
+                return trajectory
+
+        if cost < best_cost:
             best_cost = cost
             best_trajectory = trajectory
 
